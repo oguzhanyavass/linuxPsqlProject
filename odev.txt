@@ -1,0 +1,105 @@
+    Postgresql veritabanı sunucusu kurma:
+
+    Öncelikle Postgresql'in deposunu sisteme eklemek için aşağıdaki komutları çalıştırın:
+
+sudo apt-get update
+sudo apt-get install wget ca-certificates
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+RELEASE=$(lsb_release -cs)
+echo "deb http://apt.postgresql.org/pub/repos/apt/ ${RELEASE}"-pgdg main | sudo tee  /etc/apt/sources.list.d/pgdg.list
+sudo apt-get update
+
+    Daha sonra Postgresql kurmak için aşağıdaki komutu çalıştırın:
+
+sudo apt-get install postgresql
+
+    Basit bir tablo oluşturma:
+
+    Öncelikle Postgresql'e giriş yapın ve bir veritabanı oluşturun:
+
+sudo -u postgres psql
+CREATE DATABASE testdb;
+
+    Daha sonra veritabanına bağlanıp, tablo oluşturun:
+
+\c testdb
+CREATE TABLE changes (id serial PRIMARY KEY, date timestamp, filename text, deleted_date timestamp);
+
+    /home/bsm/test dizinindeki değişiklikleri taraan shell scripti hazırlama:
+
+    Öncelikle, değişiklikleri taraan bir kod bloğu yazın. Örneğin:
+
+#!/bin/bash
+
+# directory to scan
+dir="/home/bsm/test"
+
+# scan the directory and print out any changes
+while true; do
+  changes=$(inotifywait -r -e modify,move,create,delete --format '%w%f %e' "$dir")
+  echo "$changes"
+  sleep 1
+done
+
+Bu kod, belirtilen dizinin içindeki değişiklikleri sürekli olarak taraarak ekrana yazdıracaktır.
+
+
+Tamam, devam edelim:
+
+    Shell scriptine insert komutu ekleme (devam):
+
+    Öncelikle, Postgresql veritabanına bağlanmak için psql komutunu kullanacak bir kod bloğu yazın. Örneğin:
+
+# connect to database
+psql -h localhost -U postgres -d testdb << EOF
+
+Bu kod, localhost üzerindeki Postgresql veritabanına (testdb) postgres kullanıcı adıyla bağlanır.
+
+    Daha sonra, tarağımız dizindeki değişiklikleri insert etmek için bir SQL sorgusu yazın. Örneğin:
+
+# insert changes into table
+INSERT INTO changes (date, filename, deleted_date) VALUES ('$date', '$filename', '$deleted_date');
+
+Bu sorgu, changes tablosuna tarih, dosya adı ve silinme tarihi gibi verileri ekleyecektir.
+
+    Son olarak, veritabanı bağlantısını kapatın:
+
+EOF
+
+Bu şekilde, shell scriptinize Postgresql veritabanına insert etme işlemini eklemiş olursunuz.
+
+    Shell scriptini Linux'ta bir servis olarak çalıştırma:
+
+    Öncelikle, shell scriptinizi /etc/init.d dizinine kopyalayın ve çalıştırılabilir hale getirin:
+
+sudo cp /path/to/your/script /etc/init.d
+
+sudo chmod +x /etc/init.d/yourscript
+
+    Daha sonra, aşağıdaki komutları kullanarak servisi etkinleştirin ve çalıştırın:
+
+sudo update-rc.d yourscript defaults
+sudo service yourscript start
+
+    Sistem yeniden başlatıldığında servisin otomatik olarak çalışmaya başlaması:
+
+    Servisin otomatik olarak çalışmaya başlaması için, /etc/rc.local dosyasını düzenleyin. Örneğin:
+
+sudo nano /etc/rc.local
+
+    Dosyanın en sonunda aşağıdaki satırı ekleyin:
+
+service yourscript start
+
+Bu şekilde, sistem yeniden başlatıldığında servis otomatik olarak çalışmaya başlayacaktır.
+
+Umarım bu adımları takip ederek, istediğiniz çözümü eld
+
+
+Evet, çalışıp çalışmadığını kontrol etmek için birkaç yöntem olabilir:
+
+    Servisin çalışıp çalışmadığını kontrol etmek için aşağıdaki komutu kullanabilirsiniz:
+
+sudo service yourscript status
+
+Bu komut, servisin çalışıp çalışmadığını gösterecektir.
