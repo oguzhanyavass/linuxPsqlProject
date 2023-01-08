@@ -1,0 +1,69 @@
+    Öncelikle PostgreSQL kurulu değilse kurulum yapılması gerekir. Bu işlem için PostgreSQL resmi web sitesinden indirilebilir veya Linux dağıtımlarının paket yöneticisi ile kurulabilir. Örneğin, Ubuntu ve Debian tabanlı dağıtımlarda "apt-get install postgresql" komutu ile kurulum yapılabilir.
+    PostgreSQL veritabanı oluşturulur. Bu işlem için "createdb" komutunu kullanarak veritabanı oluşturulur. Örneğin, "createdb mydatabase" komutu ile "mydatabase" isimli veritabanı oluşturulur.
+    Veritabanına basit bir tablo oluşturulur. Bu işlem için "psql" komutu ile veritabanına bağlanılır ve SQL komutları kullanılarak tablo oluşturulur. Örneğin, aşağıdaki komutlar ile "changes" isimli bir tablo oluşturulabilir:
+sudo -u postgres psql
+CREATE DATABASE mydatebase;
+psql mydatabase
+CREATE TABLE changes (
+   id serial PRIMARY KEY,
+   date date NOT NULL,
+   filename text NOT NULL,
+   deletion_date date
+);
+
+    /home/bsm/bsm dizinindeki değişiklikleri takip eden bir shell scripti oluşturulur. Bu işlem için "find" komutunu kullanarak dizin içindeki dosya değişikliklerini takip eden bir script yazılabilir. Örneğin, aşağıdaki script dosya ekleme ve silme işlemlerini takip eder:
+
+#!/bin/bash
+
+while true; do
+  # Get a list of added and removed files
+  added=$(find /home/bsm/test -type f -newermt "1 minute ago")
+  removed=$(find /home/bsm/test -type f -not -newermt "1 minute ago" -delete)
+
+  # Insert added files into the database
+  for file in $added; do
+    date=$(date -r "$file" +%Y-%m-%d)
+    filename=$(basename "$file")
+    psql mydatabase -c "INSERT INTO changes (date, filename) VALUES ('$date', '$filename');"
+  done
+
+  # Insert removed files into the database
+  for file in $removed; do
+    date=$(date -r "$file" +%Y-%m-%d)
+    filename=$(basename "$file")
+    psql mydatabase -c "INSERT INTO changes (date, filename, deletion_date) VALUES ('$date', '$filename', current_date);"
+  done
+
+  # Sleep for 1 minute
+  sleep 60
+done
+
+
+
+    Shell scriptine "insert" komutları eklenmiştir. Bu script ile dosya ekleme ve silme işlemleri takip edilerek veritabanına bu değişiklikler yazılır.
+    Shell scripti Linux'te bir servis olarak çalıştırmak için bir init scripti oluşturulur. Init scriptleri, Linux sistemlerinde servisleri çalıştırmak ve yönetmek için kullanılan betiklerdir. Örneğin, aşağıdaki init scripti "homework" adında bir servis olarak çalıştırılabilir:
+
+#!/bin/bash
+
+# Change the path to the location of your script
+SCRIPT_PATH=/path/to/script/homework.sh
+
+case "$1" in
+  start)
+    echo "Starting homework service"
+    $SCRIPT_PATH &
+    ;;
+  stop)
+    echo "Stopping homework service"
+    killall $SCRIPT_PATH
+    ;;
+  *)
+    echo "Usage: /etc/init.d/homework {start|stop}"
+    exit 1
+    ;;
+esac
+exit 0
+
+    Init scripti oluşturulduktan sonra, "update-rc.d" komutu ile sistem başlangıçta çalıştırılacak servisler listesine eklenir. Örneğin, "update-rc.d homework defaults" komutu ile "homework" servisi sistem başlangıçta çalıştırılır ve sistem yeniden başlatıldığında da çalışmaya devam eder.
+
+Bu adımlar takip edilerek PostgreSQL veritabanına dosya değişikliklerini takip eden bir servis oluşturulabilir. Bu servis çalıştırıldığında, /home/bsm/test dizininde yapılan dosya ekleme ve silme işlemleri veritabanına yazılır.
